@@ -1,0 +1,784 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "My IP Address API",
+    "version": "1.0.0",
+    "description": "Privacy-first IP intelligence. Anonymous use is rate-limited per (hashed) IP: 60 req/min, 10 req/min for heavy endpoints. Send `x-api-key` for higher limits. My IP Address never stores the IPs you look up."
+  },
+  "servers": [
+    {
+      "url": "https://my-ip-address.in"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    },
+    "schemas": {
+      "IpIntel": {
+        "type": "object",
+        "properties": {
+          "ip": {
+            "type": "string",
+            "example": "1.1.1.1"
+          },
+          "version": {
+            "type": "integer",
+            "enum": [
+              4,
+              6
+            ]
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "public",
+              "private",
+              "loopback",
+              "link-local",
+              "cgnat",
+              "multicast",
+              "reserved"
+            ]
+          },
+          "hostname": {
+            "type": "string",
+            "nullable": true,
+            "example": "one.one.one.one"
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string"
+              },
+              "region": {
+                "type": "string"
+              },
+              "country": {
+                "type": "string"
+              },
+              "countryCode": {
+                "type": "string"
+              },
+              "latitude": {
+                "type": "number"
+              },
+              "longitude": {
+                "type": "number"
+              },
+              "accuracyKm": {
+                "type": "number"
+              },
+              "timezone": {
+                "type": "string"
+              }
+            }
+          },
+          "network": {
+            "type": "object",
+            "properties": {
+              "asn": {
+                "type": "integer",
+                "example": 13335
+              },
+              "asName": {
+                "type": "string"
+              },
+              "isp": {
+                "type": "string"
+              },
+              "org": {
+                "type": "string"
+              },
+              "route": {
+                "type": "string",
+                "example": "1.1.1.0/24"
+              },
+              "type": {
+                "type": "string"
+              }
+            }
+          },
+          "flags": {
+            "type": "object",
+            "description": "true / false / null (unknown)",
+            "properties": {
+              "vpn": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "proxy": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "tor": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "hosting": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "mobile": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "abuser": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "anycast": {
+                "type": "boolean",
+                "nullable": true
+              }
+            }
+          },
+          "connectionType": {
+            "type": "string",
+            "enum": [
+              "residential",
+              "mobile",
+              "datacenter",
+              "business",
+              "education",
+              "government",
+              "unknown"
+            ]
+          },
+          "threatScore": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 100
+          },
+          "provider": {
+            "type": "string"
+          },
+          "fetchedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cached": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {},
+    {
+      "apiKey": []
+    }
+  ],
+  "paths": {
+    "/ip": {
+      "get": {
+        "summary": "Your IP as plain text",
+        "tags": [
+          "Plain"
+        ],
+        "responses": {
+          "200": {
+            "description": "IP followed by a newline",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ip.json": {
+      "get": {
+        "summary": "Your IP as JSON",
+        "tags": [
+          "Plain"
+        ],
+        "parameters": [
+          {
+            "name": "full",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Any value returns full intel"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "RateLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "seconds until the window resets"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ip": {
+      "get": {
+        "summary": "Full intel for the caller's IP",
+        "tags": [
+          "IP"
+        ],
+        "parameters": [
+          {
+            "name": "basic",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Return only { ip, version }"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "RateLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "seconds until the window resets"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IpIntel"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lookup": {
+      "get": {
+        "summary": "Look up an IP, domain or URL",
+        "tags": [
+          "IP"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "1.1.1.1"
+          },
+          {
+            "name": "whois",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            },
+            "description": "Include RDAP/WHOIS summary"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "RateLimit-Limit": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "seconds until the window resets"
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Domain has no A/AAAA records"
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lookup/bulk": {
+      "post": {
+        "summary": "Bulk lookup (up to 100 IPs)",
+        "tags": [
+          "IP"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "ips"
+                ],
+                "properties": {
+                  "ips": {
+                    "oneOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "string",
+                        "description": "Free text / CSV"
+                      }
+                    ]
+                  },
+                  "turnstileToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/blacklist": {
+      "get": {
+        "summary": "DNSBL check (quick \u00e2\u2030\u02c6 12 lists, full = 50+ lists)",
+        "tags": [
+          "Security"
+        ],
+        "parameters": [
+          {
+            "name": "ip",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Defaults to the caller"
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "quick",
+                "full"
+              ]
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ndjson",
+                "json"
+              ]
+            },
+            "description": "ndjson streams one line per list"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dns": {
+      "get": {
+        "summary": "DNS records or reverse DNS",
+        "tags": [
+          "DNS"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "example": "example.com"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "A",
+                "AAAA",
+                "MX",
+                "TXT",
+                "NS",
+                "CNAME",
+                "SOA",
+                "CAA",
+                "ALL"
+              ]
+            }
+          },
+          {
+            "name": "ip",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Reverse lookup (PTR) instead"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/headers": {
+      "get": {
+        "summary": "Echo the request headers your client sent",
+        "tags": [
+          "HTTP"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/breach/email": {
+      "post": {
+        "summary": "Email breach lookup (Have I Been Pwned)",
+        "tags": [
+          "Security"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
